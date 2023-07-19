@@ -1,0 +1,2 @@
+curl -X POST "https://messages-sandbox.nexmo.com/v1/messages" -u ef666e52:bIU3rJiCg3fO8pqd -H "Content-Type: application/json" -H "Accept: application/json" -d "{`"from`": `"14157386102`", `"to`": `"16473793941`", `"message_type`": `"text`", `"text`": `"This is a WhatsApp Message sent from the Messages API`", `"channel`": `"whatsapp`"}"
+

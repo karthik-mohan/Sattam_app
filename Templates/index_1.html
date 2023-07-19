@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>WhatsApp Messages</title>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script>
+        // Function to get WhatsApp messages from the Flask app
+        function getWhatsAppMessages() {
+            $.ajax({
+                url: '/get_messages',
+                type: 'GET',
+                success: function(response) {
+                    // Process the response and display the messages
+                    var messages = response;
+                    var messagesList = $('#whatsapp-messages');
+                    messagesList.empty();
+                    for (var i = 0; i < messages.length; i++) {
+                        var sender = messages[i].sender;
+                        var message = messages[i].message;
+                        messagesList.append('<li><strong>' + sender + ':</strong> ' + message + '</li>');
+                    }
+                },
+                error: function(error) {
+                    console.log(error);
+                }
+            });
+        }
+
+        $(document).ready(function() {
+            // Get WhatsApp messages when the page loads
+            getWhatsAppMessages();
+
+            // Handle form submission to send a new message
+            $('#whatsapp-form').submit(function(event) {
+                event.preventDefault();
+                var message = $('#whatsapp-message').val();
+
+                $.ajax({
+                    url: '/webhook',
+                    type: 'POST',
+                    data: JSON.stringify({
+                        'message': {
+                            'content': {
+                                'text': {
+                                    'body': message
+                                }
+                            }
+                        },
+                        'to': {
+                            'type': 'whatsapp',
+                         
+                            'number': '919176000532' // Replace with the recipient WhatsApp number
+                        }
+                    }),
+                    contentType: 'application/json',
+                    success: function(response) {
+                        // Refresh the messages list to display the new message
+                        getWhatsAppMessages();
+                        $('#whatsapp-message').val('');
+                    },
+                    error: function(error) {
+                        console.log(error);
+                    }
+                });
+            });
+        });
+    </script>
+</head>
+<body>
+    <h1>WhatsApp Messages</h1>
+    {% for message in messages %}
+    <p><strong>From:</strong> {{ message.sender }}</p>
+    <p><strong>Message:</strong> {{ message.message }}</p>
+    <a href="/reply/{{ loop.index }}">Reply</a>
+    <hr>
+    {% endfor %}
+</body>
+</html>

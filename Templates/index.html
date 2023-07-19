@@ -1,0 +1,213 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Sattam un kayil Admin Dashboard</title>
+    <style>
+        /* Style for tabs */
+        .tab {
+            display: none;
+        }
+        .tab.active {
+            display: block;
+        }
+        .tab-button {
+            cursor: pointer;
+            padding: 10px 20px;
+            background-color: #f1f1f1;
+            border: 1px solid #ccc;
+            border-bottom: none;
+            display: flex;
+            align-items: center;
+        }
+        .tab-button.active {
+            background-color: #ddd;
+        }
+        .tab-button img {
+            width: 24px;
+            height: 24px;
+            margin-right: 8px;
+        }
+        .messages-container {
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Received Messages</h1>
+
+    <!-- Tabs for WhatsApp, Instagram, and Facebook -->
+    <div class="tab-button" onclick="showTab('whatsapp')">
+        <img src="{{ url_for('static', filename='whatsapp_logo.png') }}" alt="WhatsApp Logo">
+        WhatsApp
+    </div>
+    <div class="tab-button" onclick="showTab('instagram')">
+        <img src="{{ url_for('static', filename='instagram_logo.png') }}" alt="Instagram Logo">
+        Instagram
+    </div>
+    <div class="tab-button" onclick="showTab('facebook')">
+        <img src="{{ url_for('static', filename='facebook_logo.png') }}" alt="Facebook Logo">
+        Facebook
+    </div>
+
+     <h2>Sattam un Kayil AI Messages:</h2>
+
+    
+
+
+    <div class="tab-button" onclick="showTab('chatgpt')">
+        <img src="path/to/chatgpt_logo.png" alt="ChatGPT Logo">
+        SattamUnkayil AI Bot
+    </div>
+
+   
+
+    <!-- Messages containers for each channel -->
+   <div class="tab" id="whatsappTab">
+        <h2>WhatsApp Messages:</h2>
+        <ul id="whatsappMessagesList"></ul>
+    </div>
+    <div class="tab" id="instagramTab">
+        <h2>Instagram Messages:</h2>
+        <ul id="instagramMessagesList"></ul>
+    </div>
+    <div class="tab" id="facebookTab">
+        <h2>Facebook Messages:</h2>
+        <ul id="facebookMessagesList"></ul>
+    </div>
+
+
+    <!-- Add a new tab for ChatGPT messages -->
+    <div class="tab" id="chatgptTab">
+        <ul id="chatgptMessagesList"></ul>
+
+        <textarea id="chatgptUserInput" placeholder="Type your message..."></textarea>
+        <button onclick="sendChatGPTMessage()">Send</button>
+    </div>
+     
+    
+<script>
+   
+
+    
+        function showTab(channel) {
+            // Hide all tabs and deactivate tab buttons
+            const tabs = document.getElementsByClassName('tab');
+            for (let tab of tabs) {
+                tab.classList.remove('active');
+            }
+            const tabButtons = document.getElementsByClassName('tab-button');
+            for (let button of tabButtons) {
+                button.classList.remove('active');
+            }
+
+            // Show the selected tab and activate the corresponding tab button
+            const selectedTab = document.getElementById(`${channel}Tab`);
+            const selectedTabButton = document.querySelector(`[onclick="showTab('${channel}')"]`);
+            selectedTab.classList.add('active');
+            selectedTabButton.classList.add('active');
+        }
+        function createMessageElement(message, channel) {
+            const listItem = document.createElement('li');
+            listItem.textContent = `${message.sender}: ${message.message}`;
+
+            // Create the reply button only if the message is from WhatsApp
+            
+                const replyButton = document.createElement('button');
+                replyButton.textContent = 'Reply';
+                replyButton.addEventListener('click', () => {
+                    // Send the reply message to app.py
+                    const replyMessage = prompt('Enter your reply:');
+            const replyData = {
+                    sender: message.sender,
+                    channel: channel,
+                    reply: replyMessage
+                };
+
+                fetch('/send_reply', {
+                    method: 'POST',
+
+                    headers: {
+
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(replyData)
+                })
+                .then(response => response.json())
+                .then(data => {
+                    alert(data.status);
+                    if (data.status === 'success') {
+                        listItem.removeChild(replyButton);
+                        // You can also update the message object in the data source
+                        // to mark it as replied and handle it accordingly in the server.
+                    }
+                })
+                    .catch(error => {
+                        console.error('Error sending reply:', error);
+                    });
+                });
+
+                listItem.appendChild(replyButton);
+            
+
+            return listItem;
+        }
+
+        function fetchMessages(channel, messagesListId) {
+            fetch('/get_messages')
+                .then(response => response.json())
+                .then(data => {
+                    const messagesList = document.getElementById(messagesListId);
+                    messagesList.innerHTML = '';
+
+                    data.forEach(message => {
+                        if (message.channel === channel) {
+                            const listItem = createMessageElement(message, channel);
+                            messagesList.appendChild(listItem);
+                        }
+                    });
+                })
+                .catch(error => {
+                    console.error('Error fetching messages:', error);
+                });
+        }
+
+        function sendChatGPTMessage() {
+            const chatgptUserInput = document.getElementById('chatgptUserInput');
+            const chatgptUserMessage = chatgptUserInput.value.trim();
+
+            if (chatgptUserMessage !== '') {
+                // Send the user's message to app.py for processing with ChatGPT
+                fetch('/send_chatgpt_message', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ message: chatgptUserMessage })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    // Display the reply message from ChatGPT immediately
+                    const chatgptMessagesList = document.getElementById('chatgptMessagesList');
+                    const listItem = createMessageElement({ sender: 'Sattam Un Kayil', message: data.reply }, 'chatgpt');
+                    chatgptMessagesList.appendChild(listItem);
+
+                    // Clear the user input
+                    chatgptUserInput.value = '';
+                })
+                .catch(error => {
+                    console.error('Error sending ChatGPT message:', error);
+                });
+            }
+        }
+
+        // Fetch messages for each channel when the page loads
+        fetchMessages('whatsapp', 'whatsappMessagesList');
+        fetchMessages('instagram', 'instagramMessagesList');
+        fetchMessages('facebook', 'facebookMessagesList');
+        //fetchMessages('chatgpt', 'chatgptMessagesList');
+    </script>
+</body>
+</html>
+

@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Reply to WhatsApp Message</title>
+</head>
+<body>
+    <h1>Reply to WhatsApp Message</h1>
+    <p><strong>From:</strong> {{ message.sender }}</p>
+    <p><strong>Message:</strong> {{ message.message }}</p>
+    <form method="post">
+        <label for="reply_message">Your Reply:</label><br>
+        <textarea name="reply_message" id="reply_message" rows="4" cols="50"></textarea><br>
+        <input type="submit" value="Send Reply">
+    </form>
+</body>
+</html>
