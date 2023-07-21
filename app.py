@@ -1,3 +1,4 @@
+import json
 from flask import Flask, request, jsonify, render_template
 import requests
 import openai
@@ -8,71 +9,48 @@ from spellchecker import SpellChecker
 from deep_translator import GoogleTranslator
 import facebook
 import enchant
-
+import pandas as pd
 
 
 app = Flask(__name__, static_url_path='/static')
 
-app.config['SECRET_KEY'] = 'Summer@2023_July'
-#socketio = SocketIO(app)
+def save_messages_to_file(messages):
+    with open('messages.json', 'w') as file:
+        json.dump(messages, file)
 
-translator = Translator()
-spell = SpellChecker()
-
-# Set up OpenAI API credentials
-openai.api_key = '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'
-
-received_messages = []  # To store received WhatsApp messages
-whatsapp_messages = []
-instagram_messages = []
-facebook_messages = []
-
+def load_messages_from_file():
+    try:
+        with open('messages.json', 'r') as file:
+            return json.load(file)
+    except FileNotFoundError:
+        return []
 
 @app.route('/', methods=['POST'])
 def webhook():
- #   if request.method == 'POST':
- #       print("Data received from Webhook is: ", request.json)
- #       return "Webhook received!"
-
-    #data = request.get_json()
-    
     data = request.json
-    print("here:", data)
-    # Validate the data structure before accessing keys
-    #if 'message' in data and 'text' in data['message']: 
     if 'channel' in data:
-            channel = data['channel']
-            message = data['text']
-            sender = data['from']
-           
+        channel = data['channel']
+        message = data['text']
+        sender = data['from']
 
-    #return jsonify({'status': 'success'})
-    # Store the message in the appropriate list based on the channel
-            if channel == 'whatsapp':
-               whatsapp_messages.append({'channel':channel, 'sender': sender, 'message': message, 'replied': False})
-            elif channel == 'instagram':
-                 instagram_messages.append({'channel':channel, 'sender': sender, 'message': message, 'replied': False})
-            elif channel == 'facebook' or channel == 'messenger':
-                 facebook_messages.append({'channel':'facebook', 'sender': sender, 'message': message, 'replied': False})
-           # socketio.emit('new_message', {'channel':channel, 'sender': sender, 'message': message}, broadcast=True)
+        # Load existing messages from the file
+        all_messages = load_messages_from_file()
 
-    #received_messages.append({'sender': sender, 'message': message})
-    #received_messages.append({'sender': sender, 'message': message, 'replied': False})
-    print("whats:",whatsapp_messages)
-    print("insta:",instagram_messages)
-    print("face:",facebook_messages)
-    #return jsonify({'status': 'success'})
+        # Append the new message to the list of messages
+        all_messages.append({'channel': channel, 'sender': sender, 'message': message, 'replied': False})
+
+        # Save the updated messages list to the file
+        save_messages_to_file(all_messages)
+   # get_messages()
+   # index()
     return jsonify({'status': 'success'})
-    #else:
-    #    return jsonify({'status': 'error', 'message': 'Invalid data format'}), 400
 
 @app.route('/get_messages', methods=['GET'])
 def get_messages():
-    #if request.method == 'GET': 
-     #   return jsonify(received_messages)
-    all_messages = whatsapp_messages + instagram_messages + facebook_messages
-    return jsonify(all_messages)
-
+    all_messages = load_messages_from_file()
+    #return jsonify(all_messages)
+    unreplied_messages = [message for message in all_messages if not message['replied']]
+    return jsonify(unreplied_messages)
 @app.route('/send_reply', methods=['POST'])
 def send_reply():
     data = request.json
@@ -115,11 +93,16 @@ def send_reply():
         print(response.json())
         if response.status_code == 202:
             # Update the replied flag for the message
-            for message in received_messages:
-                if message['sender'] == sender and not message['replied']:
+            all_messages = load_messages_from_file()
+            for message in all_messages:
+                if message['sender'] == sender and message['channel'] == channel:
                     message['replied'] = True
+                    save_messages_to_file(all_messages)
                     break
 
+        # Save the updated messages list to the file
+               
+                    
             return jsonify({'status': 'success'})
         else:
             return jsonify({'status': 'error', 'message': 'Failed to send reply'}), 500
@@ -168,4 +151,4 @@ def send_chatgpt_message():
 
 
 if __name__ == "__main__":
-    app.run(port=5000)
+    app.run(port=80)
